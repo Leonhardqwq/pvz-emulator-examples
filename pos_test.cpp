@@ -347,7 +347,7 @@ int main()
                 }
                 if (s.arrived_count > 0 && s.total_count > 0
                     && tick >= s.min_tick && tick <= s.max_tick) {
-                    file << std::setprecision(6)
+                    file << std::setprecision(10)
                          << static_cast<double>(cumulative_time_counts[c]) / s.total_count;
                 }
             }
@@ -433,7 +433,7 @@ int main()
                 }
                 if (s.alive_count > 0 && s.total_count > 0
                     && x >= static_cast<int>(s.min_x) && x <= static_cast<int>(s.max_x)) {
-                    file << std::setprecision(6)
+                    file << std::setprecision(10)
                          << static_cast<double>(cumulative_pos_counts[c]) / s.total_count;
                 }
             }

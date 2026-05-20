@@ -58,7 +58,8 @@ scene::scene(const scene& s) :
     disable_garg_throw_imp(s.disable_garg_throw_imp),
     disable_crater(s.disable_crater),
     lock_dx(s.lock_dx),
-    lock_dx_val(s.lock_dx_val)
+    lock_dx_val(s.lock_dx_val),
+    disable_cob_delay(s.disable_cob_delay)
 {
     memset(&plant_map, 0, sizeof(plant_map));
 
@@ -328,6 +329,7 @@ void scene::reset() {
     disable_crater = false;
     lock_dx = false;
     lock_dx_val = 0.0f;
+    disable_cob_delay = false;
 
     zombies.clear();
     plants.clear();

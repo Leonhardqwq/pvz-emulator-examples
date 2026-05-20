@@ -1,5 +1,6 @@
 #include <cmath>
 #include <algorithm>
+#include <atomic>
 
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -10,10 +11,10 @@
 
 namespace pvz_emulator::object {
 
-int next_uuid = 0;
+std::atomic<int> next_uuid = 0;
 
 int get_uuid() {
-    return next_uuid++;
+    return next_uuid.fetch_add(1, std::memory_order_relaxed);
 }
 
 bool rect::is_overlap_with_circle(int px, int py, int r) {
