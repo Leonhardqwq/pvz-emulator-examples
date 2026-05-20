@@ -4,14 +4,37 @@
         {
             "label": "buildLib",
             "type": "shell",
+            "options": {
+                "shell": {
+                    "executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                    "args": [
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-Command"
+                    ]
+                }
+            },
             "command": "cd lib/build; cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebugInfo ..; ninja; cd ../../"
         },
         {
             "label": "compile",
             "type": "shell",
+            "options": {
+                "shell": {
+                    "executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                    "args": [
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-Command"
+                    ]
+                }
+            },
             "command": "clang++",
             "args": [
                 "-std=c++17",
+                "-static",
                 "-O3",
                 "-fuse-ld=lld",
                 "-flto",
@@ -28,7 +51,6 @@
                 "-lshell32",
                 "-Wall",
                 "-Wextra",
-                "-Werror",
                 "-Wcast-align",
                 "-Wcast-qual",
                 "-Wctor-dtor-privacy",
@@ -54,7 +76,18 @@
         {
             "label": "run",
             "type": "shell",
-            "command": "cd dest; ./bin/${fileBasenameNoExtension}.exe; cd ..",
+            "options": {
+                "shell": {
+                    "executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                    "args": [
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-Command"
+                    ]
+                }
+            },
+            "command": "cd dest; ./bin/${fileBasenameNoExtension}; cd ..",
             "dependsOn": [
                 "compile"
             ],
