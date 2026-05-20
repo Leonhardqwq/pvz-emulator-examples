@@ -120,9 +120,17 @@ struct Setting {
         bool is_cob() const { return type == Type::Cob; }
     };
 
+    struct ImpIndex {
+        pvz_emulator::object::imp_index_mode_type mode
+            = pvz_emulator::object::imp_index_mode_type::native;
+        float high_ratio = 0.5f;
+    };
+
     pvz_emulator::object::scene_type scene_type = pvz_emulator::object::scene_type::fog;
     pvz_emulator::object::scene_type original_scene_type = pvz_emulator::object::scene_type::fog;
     std::vector<ProtectPos> protect_positions;
+    std::vector<pvz_emulator::object::zombie_type> types;
+    ImpIndex imp_index;
 };
 
 struct Config {

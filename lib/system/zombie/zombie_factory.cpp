@@ -113,6 +113,214 @@ zombie& zombie_factory::create(zombie_type type, int specified_row)
 	return z;
 }
 
+// impIndex 测试入口：创建编号低于 ref_index 的僵尸。
+zombie& zombie_factory::create_before(zombie_type type, int ref_index, int specified_row)
+{
+	unsigned int row;
+	if (specified_row >= 0 && can_spawn_at_row(type, static_cast<unsigned int>(specified_row))) {
+		row = static_cast<unsigned int>(specified_row);
+	} else {
+		row = get_spawn_row(type);
+	}
+	auto& z = scene.zombies.alloc_before(ref_index);
+
+	switch (type) {
+    case zombie_type::zombie:
+    case zombie_type::conehead:
+    case zombie_type::buckethead:
+    case zombie_type::screendoor:
+    case zombie_type::flag:
+    case zombie_type::ducky_tube:
+		subsystems.zombie.init(z, type, row);
+        break;
+
+    case zombie_type::pole_vaulting:
+		subsystems.pole_vaulting.init(z, row);
+        break;
+
+    case zombie_type::newspaper:
+		subsystems.newspaper.init(z, row);
+        break;
+
+    case zombie_type::football:
+		subsystems.football.init(z, row);
+        break;
+
+    case zombie_type::dancing:
+		subsystems.dancing.init(z, row);
+        break;
+
+    case zombie_type::backup_dancer:
+		subsystems.backup_dancer.init(z, row);
+        break;
+
+    case zombie_type::snorkel:
+		subsystems.snorkel.init(z, row);
+        break;
+
+    case zombie_type::zomboni:
+		subsystems.zomboni.init(z, row);
+        break;
+
+    case zombie_type::dolphin_rider:
+		subsystems.dolphin_rider.init(z, row);
+        break;
+
+    case zombie_type::jack_in_the_box:
+		subsystems.jack_in_the_box.init(z, row);
+        break;
+
+    case zombie_type::balloon:
+		subsystems.balloon.init(z, row);
+        break;
+
+    case zombie_type::digger:
+		subsystems.digger.init(z, row);
+        break;
+
+    case zombie_type::pogo:
+		subsystems.pogo.init(z, row);
+        break;
+
+    case zombie_type::yeti:
+		subsystems.yeti.init(z, row);
+        break;
+
+    case zombie_type::bungee:
+		subsystems.bungee.init(z, row);
+		break;
+
+    case zombie_type::ladder:
+		subsystems.ladder.init(z, row);
+        break;
+
+    case zombie_type::catapult:
+		subsystems.catapult.init(z, row);
+        break;
+
+    case zombie_type::gargantuar:
+		subsystems.gargantuar.init(z, zombie_type::gargantuar, row);
+        break;
+
+    case zombie_type::giga_gargantuar:
+		subsystems.gargantuar.init(z, zombie_type::giga_gargantuar, row);
+        break;
+
+    case zombie_type::imp:
+		subsystems.imp.init(z, row);
+        break;
+
+	default:
+		assert(false);
+	}
+
+	return z;
+}
+
+// impIndex 测试入口：创建编号高于 ref_index 的僵尸。
+zombie& zombie_factory::create_after(zombie_type type, int ref_index, int specified_row)
+{
+	unsigned int row;
+	if (specified_row >= 0 && can_spawn_at_row(type, static_cast<unsigned int>(specified_row))) {
+		row = static_cast<unsigned int>(specified_row);
+	} else {
+		row = get_spawn_row(type);
+	}
+	auto& z = scene.zombies.alloc_after(ref_index);
+
+	switch (type) {
+    case zombie_type::zombie:
+    case zombie_type::conehead:
+    case zombie_type::buckethead:
+    case zombie_type::screendoor:
+    case zombie_type::flag:
+    case zombie_type::ducky_tube:
+		subsystems.zombie.init(z, type, row);
+        break;
+
+    case zombie_type::pole_vaulting:
+		subsystems.pole_vaulting.init(z, row);
+        break;
+
+    case zombie_type::newspaper:
+		subsystems.newspaper.init(z, row);
+        break;
+
+    case zombie_type::football:
+		subsystems.football.init(z, row);
+        break;
+
+    case zombie_type::dancing:
+		subsystems.dancing.init(z, row);
+        break;
+
+    case zombie_type::backup_dancer:
+		subsystems.backup_dancer.init(z, row);
+        break;
+
+    case zombie_type::snorkel:
+		subsystems.snorkel.init(z, row);
+        break;
+
+    case zombie_type::zomboni:
+		subsystems.zomboni.init(z, row);
+        break;
+
+    case zombie_type::dolphin_rider:
+		subsystems.dolphin_rider.init(z, row);
+        break;
+
+    case zombie_type::jack_in_the_box:
+		subsystems.jack_in_the_box.init(z, row);
+        break;
+
+    case zombie_type::balloon:
+		subsystems.balloon.init(z, row);
+        break;
+
+    case zombie_type::digger:
+		subsystems.digger.init(z, row);
+        break;
+
+    case zombie_type::pogo:
+		subsystems.pogo.init(z, row);
+        break;
+
+    case zombie_type::yeti:
+		subsystems.yeti.init(z, row);
+        break;
+
+    case zombie_type::bungee:
+		subsystems.bungee.init(z, row);
+		break;
+
+    case zombie_type::ladder:
+		subsystems.ladder.init(z, row);
+        break;
+
+    case zombie_type::catapult:
+		subsystems.catapult.init(z, row);
+        break;
+
+    case zombie_type::gargantuar:
+		subsystems.gargantuar.init(z, zombie_type::gargantuar, row);
+        break;
+
+    case zombie_type::giga_gargantuar:
+		subsystems.gargantuar.init(z, zombie_type::giga_gargantuar, row);
+        break;
+
+    case zombie_type::imp:
+		subsystems.imp.init(z, row);
+        break;
+
+	default:
+		assert(false);
+	}
+
+	return z;
+}
+
 void zombie_factory::create_roof_lurking(
 	zombie_type type,
 	unsigned int row,

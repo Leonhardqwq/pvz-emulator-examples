@@ -180,6 +180,33 @@ void read_waves(
     }
 }
 
+void read_imp_index(const rapidjson::Value& val, Setting::ImpIndex& imp_index)
+{
+    assert(val.IsObject());
+
+    auto mode_val = val.FindMember("mode");
+    if (mode_val != val.MemberEnd()) {
+        std::string mode = mode_val->value.GetString();
+        if (mode == "Native" || mode == "native") {
+            imp_index.mode = pvz_emulator::object::imp_index_mode_type::native;
+        } else if (mode == "High" || mode == "high") {
+            imp_index.mode = pvz_emulator::object::imp_index_mode_type::high;
+        } else if (mode == "Low" || mode == "low") {
+            imp_index.mode = pvz_emulator::object::imp_index_mode_type::low;
+        } else if (mode == "Ratio" || mode == "ratio") {
+            imp_index.mode = pvz_emulator::object::imp_index_mode_type::ratio;
+        } else {
+            assert(false && "unreachable");
+        }
+    }
+
+    auto ratio_val = val.FindMember("highRatio");
+    if (ratio_val != val.MemberEnd()) {
+        imp_index.high_ratio = ratio_val->value.GetFloat();
+        assert(imp_index.high_ratio >= 0.0f && imp_index.high_ratio <= 1.0f);
+    }
+}
+
 void read_setting(const rapidjson::Value& val, Setting& setting)
 {
     for (auto it = val.MemberBegin(); it != val.MemberEnd(); it++) {
@@ -206,6 +233,16 @@ void read_setting(const rapidjson::Value& val, Setting& setting)
                 } else {
                     assert(false && "unreachable");
                 }
+            }
+        } else if (key == "impIndex") {
+            read_imp_index(it->value, setting.imp_index);
+        } else if (key == "types") {
+            auto type_vals = it->value.GetArray();
+            setting.types.reserve(type_vals.Size());
+
+            for (const auto& type_val : type_vals) {
+                setting.types.push_back(
+                    static_cast<pvz_emulator::object::zombie_type>(type_val.GetInt()));
             }
         } else {
             assert(false && "unreachable");

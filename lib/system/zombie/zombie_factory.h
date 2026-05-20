@@ -31,6 +31,9 @@ public:
         subsystems(s) {}
 
     object::zombie& create(object::zombie_type type, int specified_row = -1);
+    // impIndex 测试入口：普通出怪仍使用 create()，这里只控制对象池编号相对位置。
+    object::zombie& create_before(object::zombie_type type, int ref_index, int specified_row = -1);
+    object::zombie& create_after(object::zombie_type type, int ref_index, int specified_row = -1);
     void create_lurking(object::zombie_type type, unsigned int row, unsigned int col);
 
     void destroy(object::zombie& z);

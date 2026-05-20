@@ -36,6 +36,13 @@ enum class scene_type {
     moon_night = 0x5,
 };
 
+enum class imp_index_mode_type {
+    native,
+    high,
+    low,
+    ratio,
+};
+
 scene_type str_to_scene_type(const std::string& str);
 std::string scene_type_to_str(scene_type scene);
 
@@ -143,6 +150,8 @@ public:
     bool lock_dx;
     float lock_dx_val;
     bool disable_cob_delay;
+    imp_index_mode_type imp_index_mode;
+    float imp_high_ratio;
 /* 可配置部分结束 */
 
     scene(scene_type t) : type(t),
@@ -156,7 +165,9 @@ public:
         stop_spawn(false),
         enable_split_pea_bug(true),
         disable_garg_throw_imp(false),
-        disable_cob_delay(false) {}
+        disable_cob_delay(false),
+        imp_index_mode(imp_index_mode_type::native),
+        imp_high_ratio(0.5f) {}
 
     scene(const scene& s);
 

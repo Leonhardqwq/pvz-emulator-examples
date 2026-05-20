@@ -4,6 +4,8 @@
 #include<cstddef>
 #include<cassert>
 #include<array>
+#include<algorithm>
+#include<new>
 
 namespace pvz_emulator::object {
 
@@ -96,6 +98,126 @@ public:
 		} else {
 			i = next_available;
 			next_available = std::min(a[i].next_available, active_end);
+		}
+
+		a[i].next_available = i;
+		++n_actives;
+
+		return a[i].t;
+	}
+
+	// 测试辅助：分配一个编号低于 ref_index 的空闲槽。
+	T& alloc_before(int ref_index) {
+		if (ref_index <= 0) {
+			throw std::bad_alloc();
+		}
+
+		size_t prev = active_end;
+		size_t curr = next_available;
+		while (curr < active_end && curr >= static_cast<size_t>(ref_index)) {
+			prev = curr;
+			curr = std::min(a[curr].next_available, active_end);
+		}
+		if (curr >= active_end) {
+			throw std::bad_alloc();
+		}
+
+		size_t next = std::min(a[curr].next_available, active_end);
+		if (prev == active_end) {
+			next_available = next;
+		} else {
+			a[prev].next_available = next;
+		}
+
+		a[curr].next_available = curr;
+		++n_actives;
+
+		return a[curr].t;
+	}
+
+	// 测试辅助：分配一个编号高于 ref_index 的槽，必要时追加新槽。
+	T& alloc_after(int ref_index) {
+		if (ref_index < 0 || ref_index >= static_cast<int>(S)) {
+			throw std::bad_alloc();
+		}
+
+		size_t prev = active_end;
+		size_t curr = next_available;
+		while (curr < active_end && curr <= static_cast<size_t>(ref_index)) {
+			prev = curr;
+			curr = std::min(a[curr].next_available, active_end);
+		}
+
+		size_t i;
+		if (curr < active_end) {
+			i = curr;
+			size_t next = std::min(a[curr].next_available, active_end);
+			if (prev == active_end) {
+				next_available = next;
+			} else {
+				a[prev].next_available = next;
+			}
+		} else if (active_end < S && active_end > static_cast<size_t>(ref_index)) {
+			const size_t old_active_end = active_end;
+			i = old_active_end;
+			// 空闲链使用 active_end 作为链尾哨兵；保留低位空闲链并追加高位槽时，
+			// 需要把旧哨兵同步到新的 active_end，避免新槽被误认为空闲槽。
+			if (next_available >= old_active_end) {
+				next_available = old_active_end + 1;
+			} else {
+				size_t tail = next_available;
+				while (a[tail].next_available < old_active_end) {
+					tail = a[tail].next_available;
+				}
+				a[tail].next_available = old_active_end + 1;
+			}
+			active_end = old_active_end + 1;
+		} else {
+			throw std::bad_alloc();
+		}
+
+		a[i].next_available = i;
+		++n_actives;
+
+		return a[i].t;
+	}
+
+	// 测试辅助：预留低编号死槽时优先占用最低可用槽。
+	T& alloc_lowest() {
+		if (next_available > S) {
+			throw std::bad_alloc();
+		}
+
+		size_t i;
+		if (next_available >= active_end) {
+			if (active_end < S) {
+				i = active_end;
+				next_available = ++active_end;
+			} else {
+				throw std::bad_alloc();
+			}
+		} else {
+			size_t best = active_end;
+			size_t best_prev = active_end;
+			size_t prev = active_end;
+			size_t curr = next_available;
+			while (curr < active_end) {
+				if (best == active_end || curr < best) {
+					best = curr;
+					best_prev = prev;
+				}
+
+				prev = curr;
+				curr = std::min(a[curr].next_available, active_end);
+			}
+
+			i = best;
+			size_t next = std::min(a[best].next_available, active_end);
+			if (best_prev == active_end) {
+				next_available = next;
+			} else {
+				a[best_prev].next_available = next;
+			}
 		}
 
 		a[i].next_available = i;

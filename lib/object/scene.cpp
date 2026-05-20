@@ -59,7 +59,9 @@ scene::scene(const scene& s) :
     disable_crater(s.disable_crater),
     lock_dx(s.lock_dx),
     lock_dx_val(s.lock_dx_val),
-    disable_cob_delay(s.disable_cob_delay)
+    disable_cob_delay(s.disable_cob_delay),
+    imp_index_mode(s.imp_index_mode),
+    imp_high_ratio(s.imp_high_ratio)
 {
     memset(&plant_map, 0, sizeof(plant_map));
 
@@ -307,6 +309,28 @@ void scene::to_json(rapidjson::Writer<rapidjson::StringBuffer>& writer) {
     writer.Key("disable_crater");
     writer.Bool(disable_crater);
 
+    writer.Key("imp_index_mode");
+    switch (imp_index_mode) {
+    case imp_index_mode_type::native:
+        writer.String("native");
+        break;
+    case imp_index_mode_type::high:
+        writer.String("high");
+        break;
+    case imp_index_mode_type::low:
+        writer.String("low");
+        break;
+    case imp_index_mode_type::ratio:
+        writer.String("ratio");
+        break;
+    default:
+        writer.String("native");
+        break;
+    }
+
+    writer.Key("imp_high_ratio");
+    writer.Double(imp_high_ratio);
+
     if (lock_dx) {
         writer.Key("lock_dx_val");
         writer.Double(lock_dx_val);
@@ -330,6 +354,8 @@ void scene::reset() {
     lock_dx = false;
     lock_dx_val = 0.0f;
     disable_cob_delay = false;
+    imp_index_mode = imp_index_mode_type::native;
+    imp_high_ratio = 0.5f;
 
     zombies.clear();
     plants.clear();

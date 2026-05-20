@@ -84,7 +84,27 @@ void zombie_gargantuar::update(zombie& z) {
 
         z.has_item_or_walk_left = false;
         if (!scene.disable_garg_throw_imp) {
-            auto& imp = zombie_factory(scene).create(zombie_type::imp);
+            // auto& imp = zombie_factory(scene).create(zombie_type::imp);
+            auto create_imp = [&]() -> zombie& {
+                auto parent_index = scene.zombies.get_index(z);
+                switch (scene.imp_index_mode) {
+                case imp_index_mode_type::native:
+                    return zombie_factory(scene).create(zombie_type::imp);
+                case imp_index_mode_type::high:
+                    return zombie_factory(scene).create_after(zombie_type::imp, parent_index);
+                case imp_index_mode_type::low:
+                    return zombie_factory(scene).create_before(zombie_type::imp, parent_index);
+                case imp_index_mode_type::ratio:
+                    if (rng.randfloat(0, 1) < scene.imp_high_ratio) {
+                        return zombie_factory(scene).create_after(zombie_type::imp, parent_index);
+                    }
+                    return zombie_factory(scene).create_before(zombie_type::imp, parent_index);
+                default:
+                    assert(false && "unreachable");
+                    return zombie_factory(scene).create(zombie_type::imp);
+                }
+            };
+            auto& imp = create_imp();
             imp.spawn_wave = z.spawn_wave;
 
             imp.row = z.row;
