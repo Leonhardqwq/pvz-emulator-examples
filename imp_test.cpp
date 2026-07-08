@@ -128,13 +128,13 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
     test_info.merge(local_test_info);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    ::system("chcp 65001 > nul");
+    setup_console_encoding();
 
-    auto args = parse_cmd_line();
+    auto args = parse_cmd_line(argc, argv);
     auto config_file = get_cmd_arg(args, "f");
     auto output_file = get_cmd_arg(args, "o", "imp_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "10000"));
@@ -146,7 +146,7 @@ int main()
     validate_config(config);
     auto garg_types = get_garg_types(config.setting);
 
-    std::vector<std::thread> threads;
+    std::vector<test_thread> threads;
     for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
         threads.emplace_back([config, repeat, garg_types, disable_cob_delay]() {
             test_one(config, repeat, garg_types, disable_cob_delay);

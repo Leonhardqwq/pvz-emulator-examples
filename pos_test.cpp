@@ -199,13 +199,13 @@ void test_one_time(
     time_table.merge(local_table);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    ::system("chcp 65001 > nul");
+    setup_console_encoding();
 
-    auto args = parse_cmd_line();
+    auto args = parse_cmd_line(argc, argv);
     auto config_file = get_cmd_arg(args, "f");
     auto output_file = get_cmd_arg(args, "o", "pos_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "20000"));
@@ -221,7 +221,7 @@ int main()
     validate_config(config);
     validate_zombie_types(zombie_types);
 
-    std::vector<std::thread> threads;
+    std::vector<test_thread> threads;
     if (time_mode) {
         for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
             threads.emplace_back([config, repeat, zombie_types, target_x, disable_cob_delay]() {

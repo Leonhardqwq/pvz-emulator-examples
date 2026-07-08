@@ -1,3 +1,5 @@
+.DS_Store
+
 .vscode
 .cache
 
@@ -19,3 +21,4 @@ dest/bin/*
 # keep lib/build folder
 lib/build/*
 !lib/build/foo
+lib/build-macos-universal/
