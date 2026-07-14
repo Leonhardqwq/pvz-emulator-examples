@@ -42,11 +42,25 @@ void validate_config(const Config& config)
     }
 }
 
-double calc_smash_rate(const Config& config, int smashed_garg_count, int total_garg_count)
+std::string format_smash_rate(
+    const Config& config, int smashed_garg_count, int total_garg_count, bool show_std)
 {
     int total_garg_rows = is_backyard(config.setting.scene_type) ? 4 : 5;
-    return 100.0 * (smashed_garg_count / (total_garg_count / 5.0))
-        * (static_cast<double>(config.setting.protect_positions.size()) / total_garg_rows);
+    double k = 500.0 * static_cast<double>(config.setting.protect_positions.size())
+        / total_garg_rows;
+    double p = total_garg_count > 0
+        ? static_cast<double>(smashed_garg_count) / total_garg_count
+        : 0.0;
+    double mean = k * p;
+
+    if (show_std) {
+        double se = total_garg_count > 0 ? k * std::sqrt(p * (1.0 - p) / total_garg_count) : 0.0;
+        return format_mean_std(mean, se, "%");
+    }
+
+    std::ostringstream os;
+    os << std::fixed << std::setprecision(2) << mean << "%";
+    return os.str();
 }
 
 void test_one(const Config& config, int repeat, bool disable_cob_delay)
@@ -88,6 +102,7 @@ int main()
     auto output_file = get_cmd_arg(args, "o", "smash_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "10000"));
     auto disable_cob_delay = !get_cmd_flag(args, "cd");
+    auto show_std = get_cmd_flag(args, "std");
 
     auto [file, full_output_file] = open_csv(output_file);
 
@@ -112,10 +127,9 @@ int main()
     file << "总和,";
     for (const auto& wave : summary.waves) {
         const auto& garg_summary = summary.garg_summary_by_wave.at(wave);
-        file << std::fixed << std::setprecision(2)
-             << calc_smash_rate(
-                    config, garg_summary.smashed_garg_count, garg_summary.total_garg_count)
-             << "%,";
+        file << format_smash_rate(config, garg_summary.smashed_garg_count,
+                    garg_summary.total_garg_count, show_std)
+             << ",";
     }
     file << "\n";
 
@@ -129,11 +143,10 @@ int main()
         for (const auto& wave : summary.waves) {
             const auto& garg_summary = summary.garg_summary_by_wave.at(wave);
 
-            file << std::fixed << std::setprecision(2)
-                 << calc_smash_rate(config,
+            file << format_smash_rate(config,
                         garg_summary.smashed_garg_count_by_row.at(protect_position.row - 1),
-                        garg_summary.total_garg_count)
-                 << "%,";
+                        garg_summary.total_garg_count, show_std)
+                 << ",";
         }
         file << "\n";
     }
@@ -156,10 +169,10 @@ int main()
     file << "\n";
 
     for (const auto& [os, data] : table) {
-        file << os.wave << "," << std::fixed << std::setprecision(2)
-             << calc_smash_rate(config, data.smashed_garg_count,
-                    summary.garg_summary_by_wave.at(os.wave).total_garg_count)
-             << "%," << data.smashed_garg_count << "," << data.total_garg_count << ",";
+        file << os.wave << ","
+             << format_smash_rate(config, data.smashed_garg_count,
+                    summary.garg_summary_by_wave.at(os.wave).total_garg_count, show_std)
+             << "," << data.smashed_garg_count << "," << data.total_garg_count << ",";
         for (const auto& op_state : os.op_states) {
             file << op_state_to_string(op_state) << ",";
         }

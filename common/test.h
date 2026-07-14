@@ -4,6 +4,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <codecvt>
 #include <ctime>
 #include <filesystem>
@@ -113,4 +114,54 @@ std::vector<std::string> parse_cmd_line()
         tokens.push_back(token);
     }
     return tokens;
+}
+
+// Standard error of the mean, given the sum, sum-of-squares, and count of samples.
+[[nodiscard]] inline double sample_standard_error(double sum, double sum_sq, long long count)
+{
+    if (count < 2) {
+        return 0.0;
+    }
+    double n = static_cast<double>(count);
+    double mean = sum / n;
+    double variance = (sum_sq - n * mean * mean) / (n - 1.0);
+    return variance > 0.0 ? std::sqrt(variance / n) : 0.0;
+}
+
+// Formats "mean ± std": std is rounded to 2 significant figures and mean to the
+// same number of decimal places. `suffix` (e.g. "%") is appended to both numbers.
+// When std is non-positive (no meaningful spread), `fallback_precision` decimal
+// places are used for the mean; callers should pass the precision they use on
+// the std-disabled path so both outputs match.
+[[nodiscard]] std::string format_mean_std(
+    double mean, double sd, const std::string& suffix = "", int fallback_precision = 2)
+{
+    if (!std::isfinite(sd) || sd <= 0.0) {
+        std::ostringstream os;
+        os << std::fixed << std::setprecision(fallback_precision) << mean << suffix << " ± 0"
+           << suffix;
+        return os.str();
+    }
+
+    auto round_to = [](double value, int dp) {
+        double scale = std::pow(10.0, dp);
+        return std::round(value * scale) / scale;
+    };
+
+    int mag = static_cast<int>(std::floor(std::log10(sd)));
+    int decimals = 1 - mag; // decimal places that keep 2 significant figures
+
+    double sd_rounded = round_to(sd, decimals);
+    // Rounding may bump the magnitude up (e.g. 0.0999 -> 0.10): re-fit decimals.
+    if (sd_rounded > 0.0 && static_cast<int>(std::floor(std::log10(sd_rounded))) > mag) {
+        decimals -= 1;
+        sd_rounded = round_to(sd, decimals);
+    }
+
+    double mean_rounded = round_to(mean, decimals);
+
+    std::ostringstream os;
+    os << std::fixed << std::setprecision(std::max(decimals, 0)) << mean_rounded << suffix
+       << " ± " << sd_rounded << suffix;
+    return os.str();
 }

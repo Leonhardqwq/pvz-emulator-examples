@@ -214,6 +214,7 @@ int main()
     bool time_mode = !x_arg.empty();
     int target_x = time_mode ? std::stoi(x_arg) : -1;
     auto disable_cob_delay = !get_cmd_flag(args, "cd");
+    auto show_std = get_cmd_flag(args, "std");
 
     auto [file, full_output_file] = open_csv(output_file);
 
@@ -280,8 +281,14 @@ int main()
         file << "到达率";
         for (const auto& col : columns) {
             const auto& s = get_time_stats(col);
-            file << "," << std::setprecision(2)
-                 << (s.total_count > 0 ? 100.0 * s.arrived_count / s.total_count : 0.0) << "%";
+            double p = s.total_count > 0 ? static_cast<double>(s.arrived_count) / s.total_count : 0.0;
+            file << ",";
+            if (show_std) {
+                double se = s.total_count > 0 ? std::sqrt(p * (1.0 - p) / s.total_count) : 0.0;
+                file << format_mean_std(100.0 * p, 100.0 * se, "%");
+            } else {
+                file << std::setprecision(2) << 100.0 * p << "%";
+            }
         }
         file << "\n";
 
@@ -347,8 +354,13 @@ int main()
                 }
                 if (s.arrived_count > 0 && s.total_count > 0
                     && tick >= s.min_tick && tick <= s.max_tick) {
-                    file << std::setprecision(10)
-                         << static_cast<double>(cumulative_time_counts[c]) / s.total_count;
+                    double q = static_cast<double>(cumulative_time_counts[c]) / s.total_count;
+                    if (show_std) {
+                        double se = std::sqrt(q * (1.0 - q) / s.total_count);
+                        file << format_mean_std(q, se, "", 10);
+                    } else {
+                        file << std::setprecision(10) << q;
+                    }
                 }
             }
             file << "\n";
@@ -366,8 +378,14 @@ int main()
         file << "存活率";
         for (const auto& col : columns) {
             const auto& s = get_stats(col);
-            file << "," << std::setprecision(2)
-                 << (s.total_count > 0 ? 100.0 * s.alive_count / s.total_count : 0.0) << "%";
+            double p = s.total_count > 0 ? static_cast<double>(s.alive_count) / s.total_count : 0.0;
+            file << ",";
+            if (show_std) {
+                double se = s.total_count > 0 ? std::sqrt(p * (1.0 - p) / s.total_count) : 0.0;
+                file << format_mean_std(100.0 * p, 100.0 * se, "%");
+            } else {
+                file << std::setprecision(2) << 100.0 * p << "%";
+            }
         }
         file << "\n";
 
@@ -433,8 +451,13 @@ int main()
                 }
                 if (s.alive_count > 0 && s.total_count > 0
                     && x >= static_cast<int>(s.min_x) && x <= static_cast<int>(s.max_x)) {
-                    file << std::setprecision(10)
-                         << static_cast<double>(cumulative_pos_counts[c]) / s.total_count;
+                    double q = static_cast<double>(cumulative_pos_counts[c]) / s.total_count;
+                    if (show_std) {
+                        double se = std::sqrt(q * (1.0 - q) / s.total_count);
+                        file << format_mean_std(q, se, "", 10);
+                    } else {
+                        file << std::setprecision(10) << q;
+                    }
                 }
             }
             file << "\n";

@@ -102,6 +102,7 @@ int main()
     auto output_file = get_cmd_arg(args, "o", "explode_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "10000"));
     auto disable_cob_delay = !get_cmd_flag(args, "cd");
+    auto show_std = get_cmd_flag(args, "std");
 
     auto [file, full_output_file] = open_csv(output_file);
 
@@ -159,7 +160,8 @@ int main()
         file << "\n";
     }
 
-    auto to_string = [](const std::vector<std::optional<double>>& loss_list) -> std::string {
+    auto to_string = [show_std](const std::vector<std::optional<double>>& loss_list,
+                         const std::vector<std::optional<double>>& se_list) -> std::string {
         std::optional<double> min;
         std::optional<size_t> min_idx;
 
@@ -178,10 +180,19 @@ int main()
         std::ostringstream os;
         for (size_t i = 0; i < loss_list.size(); i++) {
             if (loss_list[i].has_value()) {
-                if (min_idx.has_value() && *min_idx == i) {
-                    os << "[" << *loss_list[i] << "]";
+                std::string cell;
+                if (show_std) {
+                    cell = format_mean_std(*loss_list[i], se_list[i].value_or(0.0), "", 3);
                 } else {
-                    os << *loss_list[i];
+                    std::ostringstream cell_os;
+                    cell_os << std::fixed << std::setprecision(3) << *loss_list[i];
+                    cell = cell_os.str();
+                }
+
+                if (min_idx.has_value() && *min_idx == i) {
+                    os << "[" << cell << "]";
+                } else {
+                    os << cell;
                 }
             }
             os << ",";
@@ -194,6 +205,7 @@ int main()
         file << tick << ",";
 
         std::vector<std::optional<double>> loss_list, explode_loss_list, hp_loss_list;
+        std::vector<std::optional<double>> loss_se_list, explode_se_list, hp_se_list;
 
         for (const auto& test_info : table.test_infos) {
             if (tick < test_info.start_tick
@@ -202,8 +214,13 @@ int main()
                 loss_list.push_back(std::nullopt);
                 explode_loss_list.push_back(std::nullopt);
                 hp_loss_list.push_back(std::nullopt);
+                loss_se_list.push_back(std::nullopt);
+                explode_se_list.push_back(std::nullopt);
+                hp_se_list.push_back(std::nullopt);
             } else {
-                const auto& loss_info = test_info.merged_loss_info[tick - test_info.start_tick];
+                int idx = tick - test_info.start_tick;
+                const auto& loss_info = test_info.merged_loss_info[idx];
+                const auto& sum_sq = test_info.loss_sum_sq[idx];
                 double explode = (loss_info.explode.from_upper + loss_info.explode.from_same
                                      + loss_info.explode.from_lower)
                     * 300.0;
@@ -211,11 +228,17 @@ int main()
                 loss_list.push_back((explode + hp) / table.repeat);
                 explode_loss_list.push_back(explode / table.repeat);
                 hp_loss_list.push_back(hp / table.repeat);
+                loss_se_list.push_back(
+                    sample_standard_error(explode + hp, sum_sq.total, table.repeat));
+                explode_se_list.push_back(
+                    sample_standard_error(explode, sum_sq.explode, table.repeat));
+                hp_se_list.push_back(sample_standard_error(hp, sum_sq.hp, table.repeat));
             }
         }
 
-        file << to_string(loss_list) << "," << to_string(explode_loss_list) << ","
-             << to_string(hp_loss_list) << ",";
+        file << to_string(loss_list, loss_se_list) << ","
+             << to_string(explode_loss_list, explode_se_list) << ","
+             << to_string(hp_loss_list, hp_se_list) << ",";
 
         file << "\n";
     }

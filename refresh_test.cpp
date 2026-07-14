@@ -199,6 +199,7 @@ int main()
     auto natural = get_cmd_flag(args, "n");
     auto disable_cob_delay = !get_cmd_flag(args, "cd");
     auto enable_raw = get_cmd_flag(args, "raw");
+    auto show_std = get_cmd_flag(args, "std");
     auto dance_cheat = get_dance_cheat(use_dance_cheat, assume_activate);
 
     auto [file, full_output_file] = open_csv(output_file);
@@ -259,7 +260,13 @@ int main()
     file << std::fixed << std::setprecision(3);
     for (const auto& col : table.cols) {
         file << "平均意外率,";
-        file << 100.0 * col.average_accident_rate << "%,,";
+        if (show_std) {
+            file << format_mean_std(100.0 * col.average_accident_rate,
+                        100.0 * col.average_accident_rate_se, "%", 3)
+                 << ",,";
+        } else {
+            file << 100.0 * col.average_accident_rate << "%,,";
+        }
     }
     file << "\n";
 
@@ -272,8 +279,14 @@ int main()
     for (size_t i = 0; i < table.max_row_count; i++) {
         for (const auto& col : table.cols) {
             if (i < col.rows.size()) {
-                file << zombie_types_to_names(col.rows[i].first) << ","
-                     << 100.0 * col.rows[i].second << "%,";
+                file << zombie_types_to_names(col.rows[i].types) << ",";
+                if (show_std) {
+                    file << format_mean_std(
+                                100.0 * col.rows[i].mean, 100.0 * col.rows[i].se, "%", 3)
+                         << ",";
+                } else {
+                    file << 100.0 * col.rows[i].mean << "%,";
+                }
             } else {
                 file << ",,";
             }

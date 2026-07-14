@@ -20,17 +20,26 @@ pvz_emulator::object::plant::explode_info& operator+=(
     return lhs;
 }
 
+// Per-tick sum-of-squares of the per-run loss values, used to derive standard errors.
+struct LossSumSq {
+    double explode = 0.0;
+    double hp = 0.0;
+    double total = 0.0;
+};
+
 struct TestInfo {
     friend struct Table;
 
     int start_tick;
     std::vector<LossInfo> merged_loss_info;
+    std::vector<LossSumSq> loss_sum_sq;
 
 private:
     void update(const Test& test)
     {
         if (merged_loss_info.empty()) {
             merged_loss_info.resize(test.loss_infos.size());
+            loss_sum_sq.resize(test.loss_infos.size());
             start_tick = test.start_tick;
         }
 
@@ -39,10 +48,23 @@ private:
         for (size_t tick = 0; tick < test.loss_infos.size(); tick++) {
             const auto& loss_info = test.loss_infos.at(tick);
 
+            pvz_emulator::object::plant::explode_info run_explode = {0, 0, 0};
+            int run_hp = 0;
             for (const auto& plant : test.protect_plants) {
-                merged_loss_info[tick].explode += loss_info[plant->row].explode;
-                merged_loss_info[tick].hp_loss += loss_info[plant->row].hp_loss;
+                run_explode += loss_info[plant->row].explode;
+                run_hp += loss_info[plant->row].hp_loss;
             }
+
+            merged_loss_info[tick].explode += run_explode;
+            merged_loss_info[tick].hp_loss += run_hp;
+
+            double explode_damage
+                = (run_explode.from_upper + run_explode.from_same + run_explode.from_lower) * 300.0;
+            double hp_loss = run_hp;
+            double total = explode_damage + hp_loss;
+            loss_sum_sq[tick].explode += explode_damage * explode_damage;
+            loss_sum_sq[tick].hp += hp_loss * hp_loss;
+            loss_sum_sq[tick].total += total * total;
         }
     }
 
@@ -53,6 +75,9 @@ private:
         for (size_t tick = 0; tick < other.merged_loss_info.size(); tick++) {
             merged_loss_info[tick].explode += other.merged_loss_info[tick].explode;
             merged_loss_info[tick].hp_loss += other.merged_loss_info[tick].hp_loss;
+            loss_sum_sq[tick].explode += other.loss_sum_sq[tick].explode;
+            loss_sum_sq[tick].hp += other.loss_sum_sq[tick].hp;
+            loss_sum_sq[tick].total += other.loss_sum_sq[tick].total;
         }
     }
 };
