@@ -28,9 +28,10 @@ void insert_setup(Test& test, int tick, const std::vector<Setting::ProtectPos>& 
     test.ops.push_back({tick, f});
 }
 
-void insert_spawn(Test& test, int tick, const std::vector<zombie_type>& zombie_types)
+void insert_spawn(Test& test, int tick, const std::vector<zombie_type>& zombie_types, bool huge)
 {
-    auto f = [zombie_types](pvz_emulator::world& w) {
+    auto f = [zombie_types, huge](pvz_emulator::world& w) {
+        w.scene.spawn.wave = huge ? 9 : 5;
         for (const auto& type : zombie_types) {
             for (int i = 0; i < 5; i++) {
                 w.zombie_factory.create(type);
@@ -180,7 +181,7 @@ void insert_smart_fodder(Test& test, int tick, const SmartFodder* fodder)
 } // namespace _pos_internal
 
 void load_wave(const Setting& setting, const Wave& wave,
-    const std::vector<pvz_emulator::object::zombie_type>& zombie_types, Test& test)
+    const std::vector<pvz_emulator::object::zombie_type>& zombie_types, bool huge, Test& test)
 {
     using namespace _pos_internal;
 
@@ -189,7 +190,7 @@ void load_wave(const Setting& setting, const Wave& wave,
 
     int base_tick = 0;
     insert_setup(test, base_tick, setting.protect_positions);
-    insert_spawn(test, base_tick, zombie_types);
+    insert_spawn(test, base_tick, zombie_types, huge);
 
     for (const auto& ice_time : wave.ice_times) {
         insert_ice(test, base_tick + ice_time - 99);

@@ -44,7 +44,7 @@ std::mutex mtx;
 PosTable table;
 TimeTable time_table;
 
-void test_one(const Config& config, int repeat, const std::vector<zombie_type>& zombie_types, bool disable_cob_delay)
+void test_one(const Config& config, int repeat, const std::vector<zombie_type>& zombie_types, bool disable_cob_delay, bool huge)
 {
     world w(config.setting.scene_type);
     PosTable local_table;
@@ -53,7 +53,7 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
         for (size_t wave_idx = 0; wave_idx < config.waves.size(); wave_idx++) {
             const auto& wave = config.waves[wave_idx];
             Test test;
-            load_wave(config.setting, wave, zombie_types, test);
+            load_wave(config.setting, wave, zombie_types, huge, test);
 
             w.scene.reset();
             w.scene.stop_spawn = true;
@@ -105,7 +105,7 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
 }
 
 void test_one_time(
-    const Config& config, int repeat, const std::vector<zombie_type>& zombie_types, int target_x, bool disable_cob_delay)
+    const Config& config, int repeat, const std::vector<zombie_type>& zombie_types, int target_x, bool disable_cob_delay, bool huge)
 {
     world w(config.setting.scene_type);
     TimeTable local_table;
@@ -114,7 +114,7 @@ void test_one_time(
         for (size_t wave_idx = 0; wave_idx < config.waves.size(); wave_idx++) {
             const auto& wave = config.waves[wave_idx];
             Test test;
-            load_wave(config.setting, wave, zombie_types, test);
+            load_wave(config.setting, wave, zombie_types, huge, test);
 
             w.scene.reset();
             w.scene.stop_spawn = true;
@@ -215,6 +215,7 @@ int main()
     int target_x = time_mode ? std::stoi(x_arg) : -1;
     auto disable_cob_delay = !get_cmd_flag(args, "cd");
     auto show_std = get_cmd_flag(args, "std");
+    auto huge = get_cmd_flag(args, "h");
 
     auto [file, full_output_file] = open_csv(output_file);
 
@@ -225,14 +226,14 @@ int main()
     std::vector<std::thread> threads;
     if (time_mode) {
         for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
-            threads.emplace_back([config, repeat, zombie_types, target_x, disable_cob_delay]() {
-                test_one_time(config, repeat, zombie_types, target_x, disable_cob_delay);
+            threads.emplace_back([config, repeat, zombie_types, target_x, disable_cob_delay, huge]() {
+                test_one_time(config, repeat, zombie_types, target_x, disable_cob_delay, huge);
             });
         }
     } else {
         for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
             threads.emplace_back(
-                [config, repeat, zombie_types, disable_cob_delay]() { test_one(config, repeat, zombie_types, disable_cob_delay); });
+                [config, repeat, zombie_types, disable_cob_delay, huge]() {test_one(config, repeat, zombie_types, disable_cob_delay, huge);});
         }
     }
     for (auto& t : threads) {
