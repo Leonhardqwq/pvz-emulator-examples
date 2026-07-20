@@ -7,6 +7,7 @@
 #include "common/pe.h"
 #include "constants/constants.h"
 #include "seml/operation.h"
+#include "system/rng.h"
 #include "system/util.h"
 #include "system/zombie/zombie.h"
 #include "types.h"
@@ -65,16 +66,25 @@ void insert_setup(Test& test, int tick, const std::vector<Setting::ProtectPos>& 
     test.ops.push_back({tick, f});
 }
 
-void insert_spawn(Test& test, int tick, int wave, zombie_type garg_type)
+void insert_spawn(Test& test, int tick, int wave, zombie_type garg_type,
+    const std::vector<unsigned int>& spawn_rows)
 {
-    auto f = [&test, tick, wave, garg_type](pvz_emulator::world& w) {
+    auto f = [&test, tick, wave, garg_type, spawn_rows](pvz_emulator::world& w) {
         w.scene.spawn.wave = wave;
         if (needs_low_index_slots(test.imp_index)) {
             reserve_low_index_imp_slots(w);
         }
 
+        pvz_emulator::system::rng random(w.scene);
         for (int i = 0; i < 5; i++) {
-            auto& z = w.zombie_factory.create(garg_type);
+            int row = -1;
+            if (spawn_rows.size() == 1) {
+                row = static_cast<int>(spawn_rows.front());
+            } else if (!spawn_rows.empty()) {
+                auto index = random.randint(static_cast<unsigned int>(spawn_rows.size()));
+                row = static_cast<int>(spawn_rows[index]);
+            }
+            auto& z = w.zombie_factory.create(garg_type, row);
             test.garg_infos.push_back({{&z, z.uuid}, garg_type, z.row, wave, tick});
         }
     };
@@ -486,7 +496,8 @@ void update_one_tick(Test& test, pvz_emulator::world& w, int tick)
 
 } // namespace _imp_internal
 
-void load_config(const Config& config, pvz_emulator::object::zombie_type garg_type, Test& test)
+void load_config(const Config& config, pvz_emulator::object::zombie_type garg_type,
+    const std::vector<unsigned int>& spawn_rows, Test& test)
 {
     using namespace _imp_internal;
 
@@ -504,7 +515,7 @@ void load_config(const Config& config, pvz_emulator::object::zombie_type garg_ty
         const int wave_num = static_cast<int>(i + 1);
         const auto& wave = config.waves[i];
 
-        insert_spawn(test, base_tick, wave_num, garg_type);
+        insert_spawn(test, base_tick, wave_num, garg_type, spawn_rows);
 
         for (const auto& ice_time : wave.ice_times) {
             insert_ice(test, base_tick + ice_time - 99);

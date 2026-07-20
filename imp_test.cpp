@@ -6,6 +6,7 @@
 #include "seml/imp/lib.h"
 #include "world.h"
 
+#include <algorithm>
 #include <mutex>
 #include <unordered_set>
 
@@ -45,6 +46,24 @@ std::vector<zombie_type> get_garg_types(const Setting& setting)
     return garg_types;
 }
 
+std::vector<unsigned int> parse_spawn_rows(const std::string& row_nums)
+{
+    std::vector<unsigned int> rows;
+    for (const auto row_num : row_nums) {
+        if (row_num < '1' || row_num > '6') {
+            std::cerr << "spawnRow 应由 1~6 的不重复路数组成" << std::endl;
+            exit(1);
+        }
+        auto row = static_cast<unsigned int>(row_num - '1');
+        if (std::find(rows.begin(), rows.end(), row) != rows.end()) {
+            std::cerr << "spawnRow 中的路数不可重复" << std::endl;
+            exit(1);
+        }
+        rows.push_back(row);
+    }
+    return rows;
+}
+
 void validate_config(const Config& config)
 {
     if (config.waves.empty()) {
@@ -59,6 +78,29 @@ void validate_config(const Config& config)
     if (config.setting.imp_index.high_ratio < 0.0f || config.setting.imp_index.high_ratio > 1.0f) {
         std::cerr << "impIndex:ratio value should be in [0, 1]" << std::endl;
         exit(1);
+    }
+}
+
+void validate_spawn_rows(scene_type scene_type, const std::vector<zombie_type>& garg_types,
+    const std::vector<unsigned int>& spawn_rows)
+{
+    if (spawn_rows.empty()) {
+        return;
+    }
+    world w(scene_type);
+    for (const auto row : spawn_rows) {
+        if (row >= w.scene.rows) {
+            std::cerr << "spawnRow 超出当前场景的路数范围" << std::endl;
+            exit(1);
+        }
+        for (const auto type : garg_types) {
+            auto& z = w.zombie_factory.create(type, static_cast<int>(row));
+            if (z.row != row) {
+                std::cerr << garg_type_to_string(type) << "不能在" << row + 1 << "路生成"
+                          << std::endl;
+                exit(1);
+            }
+        }
     }
 }
 
@@ -92,7 +134,7 @@ std::mutex mtx;
 TestInfo test_info;
 
 void test_one(const Config& config, int repeat, const std::vector<zombie_type>& garg_types,
-    bool disable_cob_delay)
+    const std::vector<unsigned int>& spawn_rows, bool disable_cob_delay)
 {
     world w(config.setting.scene_type);
     TestInfo local_test_info;
@@ -100,7 +142,7 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
     for (int r = 0; r < repeat; r++) {
         for (const auto& garg_type : garg_types) {
             Test test;
-            load_config(config, garg_type, test);
+            load_config(config, garg_type, spawn_rows, test);
 
             w.scene.reset();
             w.scene.stop_spawn = true;
@@ -138,6 +180,7 @@ int main()
     auto config_file = get_cmd_arg(args, "f");
     auto output_file = get_cmd_arg(args, "o", "imp_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "10000"));
+    auto spawn_rows = parse_spawn_rows(get_cmd_arg(args, "row", ""));
     auto disable_cob_delay = !get_cmd_flag(args, "cd");
 
     auto [file, full_output_file] = open_csv(output_file);
@@ -145,11 +188,12 @@ int main()
     auto config = read_json(config_file);
     validate_config(config);
     auto garg_types = get_garg_types(config.setting);
+    validate_spawn_rows(config.setting.scene_type, garg_types, spawn_rows);
 
     std::vector<std::thread> threads;
     for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
-        threads.emplace_back([config, repeat, garg_types, disable_cob_delay]() {
-            test_one(config, repeat, garg_types, disable_cob_delay);
+        threads.emplace_back([config, repeat, garg_types, spawn_rows, disable_cob_delay]() {
+            test_one(config, repeat, garg_types, spawn_rows, disable_cob_delay);
         });
     }
     for (auto& t : threads) {
@@ -215,7 +259,7 @@ int main()
     }
 
     Test sample_test;
-    load_config(config, garg_types.front(), sample_test);
+    load_config(config, garg_types.front(), spawn_rows, sample_test);
 
     file << "\n出生波数,巨人类型,拦截结果,总数,";
     for (const auto& row : summary.rows) {

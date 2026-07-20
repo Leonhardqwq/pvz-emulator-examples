@@ -22,6 +22,24 @@ std::vector<zombie_type> parse_zombie_types(const std::string& zombie_nums)
     return zombie_types;
 }
 
+std::vector<unsigned int> parse_spawn_rows(const std::string& row_nums)
+{
+    std::vector<unsigned int> rows;
+    for (const auto row_num : row_nums) {
+        if (row_num < '1' || row_num > '6') {
+            std::cerr << "spawnRow 应由 1~6 的不重复路数组成" << std::endl;
+            exit(1);
+        }
+        auto row = static_cast<unsigned int>(row_num - '1');
+        if (std::find(rows.begin(), rows.end(), row) != rows.end()) {
+            std::cerr << "spawnRow 中的路数不可重复" << std::endl;
+            exit(1);
+        }
+        rows.push_back(row);
+    }
+    return rows;
+}
+
 void validate_config(const Config& config)
 {
     if (config.waves.empty()) {
@@ -40,11 +58,36 @@ void validate_zombie_types(const std::vector<zombie_type>& zombie_types)
     }
 }
 
+void validate_spawn_rows(scene_type scene_type, const std::vector<zombie_type>& zombie_types,
+    const std::vector<unsigned int>& spawn_rows, bool huge)
+{
+    if (spawn_rows.empty()) {
+        return;
+    }
+    world w(scene_type);
+    w.scene.spawn.wave = huge ? 9 : 5;
+    for (const auto row : spawn_rows) {
+        if (row >= w.scene.rows) {
+            std::cerr << "spawnRow 超出当前场景的路数范围" << std::endl;
+            exit(1);
+        }
+        for (const auto type : zombie_types) {
+            auto& z = w.zombie_factory.create(type, static_cast<int>(row));
+            if (z.row != row) {
+                std::cerr << zombie_type_to_name(type) << "不能在" << row + 1 << "路生成"
+                          << std::endl;
+                exit(1);
+            }
+        }
+    }
+}
+
 std::mutex mtx;
 PosTable table;
 TimeTable time_table;
 
-void test_one(const Config& config, int repeat, const std::vector<zombie_type>& zombie_types, bool disable_cob_delay, bool huge)
+void test_one(const Config& config, int repeat, const std::vector<zombie_type>& zombie_types,
+    const std::vector<unsigned int>& spawn_rows, bool disable_cob_delay, bool huge)
 {
     world w(config.setting.scene_type);
     PosTable local_table;
@@ -53,7 +96,7 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
         for (size_t wave_idx = 0; wave_idx < config.waves.size(); wave_idx++) {
             const auto& wave = config.waves[wave_idx];
             Test test;
-            load_wave(config.setting, wave, zombie_types, huge, test);
+            load_wave(config.setting, wave, zombie_types, huge, spawn_rows, test);
 
             w.scene.reset();
             w.scene.stop_spawn = true;
@@ -105,7 +148,8 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
 }
 
 void test_one_time(
-    const Config& config, int repeat, const std::vector<zombie_type>& zombie_types, int target_x, bool disable_cob_delay, bool huge)
+    const Config& config, int repeat, const std::vector<zombie_type>& zombie_types,
+    const std::vector<unsigned int>& spawn_rows, int target_x, bool disable_cob_delay, bool huge)
 {
     world w(config.setting.scene_type);
     TimeTable local_table;
@@ -114,7 +158,7 @@ void test_one_time(
         for (size_t wave_idx = 0; wave_idx < config.waves.size(); wave_idx++) {
             const auto& wave = config.waves[wave_idx];
             Test test;
-            load_wave(config.setting, wave, zombie_types, huge, test);
+            load_wave(config.setting, wave, zombie_types, huge, spawn_rows, test);
 
             w.scene.reset();
             w.scene.stop_spawn = true;
@@ -210,6 +254,7 @@ int main()
     auto output_file = get_cmd_arg(args, "o", "pos_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "20000"));
     auto zombie_types = parse_zombie_types(get_cmd_arg(args, "z"));
+    auto spawn_rows = parse_spawn_rows(get_cmd_arg(args, "row", ""));
     auto x_arg = get_cmd_arg(args, "x", "");
     bool time_mode = !x_arg.empty();
     int target_x = time_mode ? std::stoi(x_arg) : -1;
@@ -222,18 +267,19 @@ int main()
     auto config = read_json(config_file);
     validate_config(config);
     validate_zombie_types(zombie_types);
+    validate_spawn_rows(config.setting.scene_type, zombie_types, spawn_rows, huge);
 
     std::vector<std::thread> threads;
     if (time_mode) {
         for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
-            threads.emplace_back([config, repeat, zombie_types, target_x, disable_cob_delay, huge]() {
-                test_one_time(config, repeat, zombie_types, target_x, disable_cob_delay, huge);
+            threads.emplace_back([config, repeat, zombie_types, spawn_rows, target_x, disable_cob_delay, huge]() {
+                test_one_time(config, repeat, zombie_types, spawn_rows, target_x, disable_cob_delay, huge);
             });
         }
     } else {
         for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
             threads.emplace_back(
-                [config, repeat, zombie_types, disable_cob_delay, huge]() {test_one(config, repeat, zombie_types, disable_cob_delay, huge);});
+                [config, repeat, zombie_types, spawn_rows, disable_cob_delay, huge]() {test_one(config, repeat, zombie_types, spawn_rows, disable_cob_delay, huge);});
         }
     }
     for (auto& t : threads) {

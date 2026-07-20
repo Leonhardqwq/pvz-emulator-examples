@@ -3,6 +3,7 @@
 #include "common/pe.h"
 #include "constants/constants.h"
 #include "seml/operation.h"
+#include "system/rng.h"
 #include "types.h"
 
 namespace _pos_internal {
@@ -28,13 +29,21 @@ void insert_setup(Test& test, int tick, const std::vector<Setting::ProtectPos>& 
     test.ops.push_back({tick, f});
 }
 
-void insert_spawn(Test& test, int tick, const std::vector<zombie_type>& zombie_types, bool huge)
+void insert_spawn(Test& test, int tick, const std::vector<zombie_type>& zombie_types, bool huge, const std::vector<unsigned int>& spawn_rows)
 {
-    auto f = [zombie_types, huge](pvz_emulator::world& w) {
+    auto f = [zombie_types, huge, spawn_rows](pvz_emulator::world& w) {
         w.scene.spawn.wave = huge ? 9 : 5;
+        pvz_emulator::system::rng random(w.scene);
         for (const auto& type : zombie_types) {
             for (int i = 0; i < 5; i++) {
-                w.zombie_factory.create(type);
+                int row = -1;
+                if (spawn_rows.size() == 1) {
+                    row = static_cast<int>(spawn_rows.front());
+                } else if (!spawn_rows.empty()) {
+                    auto index = random.randint(static_cast<unsigned int>(spawn_rows.size()));
+                    row = static_cast<int>(spawn_rows[index]);
+                }
+                w.zombie_factory.create(type, row);
             }
         }
     };
@@ -181,7 +190,8 @@ void insert_smart_fodder(Test& test, int tick, const SmartFodder* fodder)
 } // namespace _pos_internal
 
 void load_wave(const Setting& setting, const Wave& wave,
-    const std::vector<pvz_emulator::object::zombie_type>& zombie_types, bool huge, Test& test)
+    const std::vector<pvz_emulator::object::zombie_type>& zombie_types, bool huge,
+    const std::vector<unsigned int>& spawn_rows, Test& test)
 {
     using namespace _pos_internal;
 
@@ -190,7 +200,7 @@ void load_wave(const Setting& setting, const Wave& wave,
 
     int base_tick = 0;
     insert_setup(test, base_tick, setting.protect_positions);
-    insert_spawn(test, base_tick, zombie_types, huge);
+    insert_spawn(test, base_tick, zombie_types, huge, spawn_rows);
 
     for (const auto& ice_time : wave.ice_times) {
         insert_ice(test, base_tick + ice_time - 99);
