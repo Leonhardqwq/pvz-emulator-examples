@@ -181,13 +181,13 @@ void write_log(std::ofstream& file, const TestInfos& test_infos) {
     }
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    ::system("chcp 65001 > nul");
+    setup_console_encoding();
 
-    auto args = parse_cmd_line();
+    auto args = parse_cmd_line(argc, argv);
     auto config_file = get_cmd_arg(args, "f");
     auto output_file = get_cmd_arg(args, "o", "refresh_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "1000"));
@@ -207,7 +207,7 @@ int main()
     auto config = read_json(config_file);
     validate_config(config);
 
-    std::vector<std::thread> threads;
+    std::vector<test_thread> threads;
     for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
         threads.emplace_back([config, repeat, required_types, banned_types, huge, assume_activate,
                                  dance_cheat, natural, disable_cob_delay]() {

@@ -91,13 +91,13 @@ void test_one(const Config& config, int repeat, bool disable_cob_delay)
     test_info.merge(local_test_info);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    ::system("chcp 65001 > nul");
+    setup_console_encoding();
 
-    auto args = parse_cmd_line();
+    auto args = parse_cmd_line(argc, argv);
     auto config_file = get_cmd_arg(args, "f");
     auto output_file = get_cmd_arg(args, "o", "smash_test");
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "10000"));
@@ -109,7 +109,7 @@ int main()
     auto config = read_json(config_file);
     validate_config(config);
 
-    std::vector<std::thread> threads;
+    std::vector<test_thread> threads;
     for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
         threads.emplace_back([config, repeat, disable_cob_delay]() { test_one(config, repeat, disable_cob_delay); });
     }

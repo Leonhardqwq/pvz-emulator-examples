@@ -1,3 +1,5 @@
+.DS_Store
+
 .vscode
 .cache
 
@@ -19,6 +21,6 @@ dest/bin/*
 # keep lib/build folder
 lib/build/*
 !lib/build/foo
-
 # new branch
 leon_test
+lib/build-macos-universal/
