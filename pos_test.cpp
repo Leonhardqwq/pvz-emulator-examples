@@ -128,7 +128,7 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
                 if (!is_requested)
                     continue;
 
-                if (!z.is_dead && z.is_not_dying) {
+                if (!z.is_dead && z.is_not_dying && !z.has_death_status()) {
                     auto key = StatsKey {static_cast<int>(wave_idx), z.type};
                     local_stats[key].alive_count++;
                     if (z.x < local_stats[key].min_x)
@@ -214,7 +214,7 @@ void test_one_time(
                         continue;
                     }
 
-                    if (!z.is_dead && z.is_not_dying && static_cast<int>(z.x) <= target_x) {
+                    if (!z.is_dead && z.is_not_dying && !z.has_death_status() && static_cast<int>(z.x) <= target_x) {
                         auto key = StatsKey {static_cast<int>(wave_idx), z.type};
                         local_stats[key].arrived_count++;
                         if (tick < local_stats[key].min_tick)
