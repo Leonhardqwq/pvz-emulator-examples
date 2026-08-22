@@ -40,6 +40,22 @@ std::vector<unsigned int> parse_spawn_rows(const std::string& row_nums)
     return rows;
 }
 
+zombie_dance_cheat parse_dance_cheat(const std::vector<std::string>& args)
+{
+    auto mode = get_cmd_arg(args, "dance", "");
+    if (mode == "fast") {
+        return zombie_dance_cheat::fast;
+    }
+    if (mode == "slow") {
+        return zombie_dance_cheat::slow;
+    }
+    if (!mode.empty()) {
+        std::cerr << "dance 应为 fast 或 slow" << std::endl;
+        exit(1);
+    }
+    return zombie_dance_cheat::none;
+}
+
 void validate_config(const Config& config)
 {
     if (config.waves.empty()) {
@@ -87,7 +103,7 @@ PosTable table;
 TimeTable time_table;
 
 void test_one(const Config& config, int repeat, const std::vector<zombie_type>& zombie_types,
-    const std::vector<unsigned int>& spawn_rows, bool disable_cob_delay, bool huge)
+    const std::vector<unsigned int>& spawn_rows, zombie_dance_cheat dance_cheat, bool disable_cob_delay, bool huge)
 {
     world w(config.setting.scene_type);
     PosTable local_table;
@@ -96,7 +112,7 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
         for (size_t wave_idx = 0; wave_idx < config.waves.size(); wave_idx++) {
             const auto& wave = config.waves[wave_idx];
             Test test;
-            load_wave(config.setting, wave, zombie_types, huge, spawn_rows, test);
+            load_wave(config.setting, wave, zombie_types, huge, dance_cheat, spawn_rows, test);
 
             w.scene.reset();
             w.scene.stop_spawn = true;
@@ -149,7 +165,7 @@ void test_one(const Config& config, int repeat, const std::vector<zombie_type>& 
 
 void test_one_time(
     const Config& config, int repeat, const std::vector<zombie_type>& zombie_types,
-    const std::vector<unsigned int>& spawn_rows, int target_x, bool disable_cob_delay, bool huge)
+    const std::vector<unsigned int>& spawn_rows, zombie_dance_cheat dance_cheat, int target_x, bool disable_cob_delay, bool huge)
 {
     world w(config.setting.scene_type);
     TimeTable local_table;
@@ -158,7 +174,7 @@ void test_one_time(
         for (size_t wave_idx = 0; wave_idx < config.waves.size(); wave_idx++) {
             const auto& wave = config.waves[wave_idx];
             Test test;
-            load_wave(config.setting, wave, zombie_types, huge, spawn_rows, test);
+            load_wave(config.setting, wave, zombie_types, huge, dance_cheat, spawn_rows, test);
 
             w.scene.reset();
             w.scene.stop_spawn = true;
@@ -255,6 +271,7 @@ int main()
     auto total_repeat_num = std::stoi(get_cmd_arg(args, "r", "20000"));
     auto zombie_types = parse_zombie_types(get_cmd_arg(args, "z"));
     auto spawn_rows = parse_spawn_rows(get_cmd_arg(args, "row", ""));
+    auto dance_cheat = parse_dance_cheat(args);
     auto x_arg = get_cmd_arg(args, "x", "");
     bool time_mode = !x_arg.empty();
     int target_x = time_mode ? std::stoi(x_arg) : -1;
@@ -272,14 +289,14 @@ int main()
     std::vector<std::thread> threads;
     if (time_mode) {
         for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
-            threads.emplace_back([config, repeat, zombie_types, spawn_rows, target_x, disable_cob_delay, huge]() {
-                test_one_time(config, repeat, zombie_types, spawn_rows, target_x, disable_cob_delay, huge);
+            threads.emplace_back([config, repeat, zombie_types, spawn_rows, dance_cheat, target_x, disable_cob_delay, huge]() {
+                test_one_time(config, repeat, zombie_types, spawn_rows, dance_cheat, target_x, disable_cob_delay, huge);
             });
         }
     } else {
         for (int repeat : assign_repeat(total_repeat_num, std::thread::hardware_concurrency())) {
             threads.emplace_back(
-                [config, repeat, zombie_types, spawn_rows, disable_cob_delay, huge]() {test_one(config, repeat, zombie_types, spawn_rows, disable_cob_delay, huge);});
+                [config, repeat, zombie_types, spawn_rows, dance_cheat, disable_cob_delay, huge]() {test_one(config, repeat, zombie_types, spawn_rows, dance_cheat, disable_cob_delay, huge);});
         }
     }
     for (auto& t : threads) {

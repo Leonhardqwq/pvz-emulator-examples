@@ -11,6 +11,7 @@ namespace _pos_internal {
 using scene_type = pvz_emulator::object::scene_type;
 using plant_type = pvz_emulator::object::plant_type;
 using zombie_type = pvz_emulator::object::zombie_type;
+using zombie_dance_cheat = pvz_emulator::object::zombie_dance_cheat;
 
 void insert_setup(Test& test, int tick, const std::vector<Setting::ProtectPos>& protect_positions)
 {
@@ -29,10 +30,11 @@ void insert_setup(Test& test, int tick, const std::vector<Setting::ProtectPos>& 
     test.ops.push_back({tick, f});
 }
 
-void insert_spawn(Test& test, int tick, const std::vector<zombie_type>& zombie_types, bool huge, const std::vector<unsigned int>& spawn_rows)
+void insert_spawn(Test& test, int tick, const std::vector<zombie_type>& zombie_types, bool huge, zombie_dance_cheat dance_cheat, const std::vector<unsigned int>& spawn_rows)
 {
-    auto f = [zombie_types, huge, spawn_rows](pvz_emulator::world& w) {
+    auto f = [zombie_types, huge, dance_cheat, spawn_rows](pvz_emulator::world& w) {
         w.scene.spawn.wave = huge ? 9 : 5;
+        w.scene.is_zombie_dance = dance_cheat == zombie_dance_cheat::slow;
         pvz_emulator::system::rng random(w.scene);
         for (const auto& type : zombie_types) {
             for (int i = 0; i < 5; i++) {
@@ -43,7 +45,10 @@ void insert_spawn(Test& test, int tick, const std::vector<zombie_type>& zombie_t
                     auto index = random.randint(static_cast<unsigned int>(spawn_rows.size()));
                     row = static_cast<int>(spawn_rows[index]);
                 }
-                w.zombie_factory.create(type, row);
+                auto& z = w.zombie_factory.create(type, row);
+                if ((type == zombie_type::zombie || type == zombie_type::conehead || type == zombie_type::buckethead) && dance_cheat != zombie_dance_cheat::none) {
+                    z.dance_cheat = dance_cheat;
+                }
             }
         }
     };
@@ -191,6 +196,7 @@ void insert_smart_fodder(Test& test, int tick, const SmartFodder* fodder)
 
 void load_wave(const Setting& setting, const Wave& wave,
     const std::vector<pvz_emulator::object::zombie_type>& zombie_types, bool huge,
+    pvz_emulator::object::zombie_dance_cheat dance_cheat,
     const std::vector<unsigned int>& spawn_rows, Test& test)
 {
     using namespace _pos_internal;
@@ -200,7 +206,7 @@ void load_wave(const Setting& setting, const Wave& wave,
 
     int base_tick = 0;
     insert_setup(test, base_tick, setting.protect_positions);
-    insert_spawn(test, base_tick, zombie_types, huge, spawn_rows);
+    insert_spawn(test, base_tick, zombie_types, huge, dance_cheat, spawn_rows);
 
     for (const auto& ice_time : wave.ice_times) {
         insert_ice(test, base_tick + ice_time - 99);
